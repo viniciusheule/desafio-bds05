@@ -1,5 +1,6 @@
 package com.devsuperior.movieflix.services;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -19,31 +20,33 @@ import com.devsuperior.movieflix.services.exceptions.ResourceNotFoundException;
 @Service
 public class UserService implements UserDetailsService {
 
-	private static Logger logger = LoggerFactory.getLogger(UserService.class);
-
-	@Autowired
-	private UserRepository repository;
+	private final static Logger logger = LoggerFactory.getLogger(UserService.class);
 	
 	@Autowired
-	private AuthService authService;
+	private UserRepository userRepository;
+	
+	@Transactional(readOnly = true)
+	public List<User> findAll() {
+		return userRepository.findAll();
+	}
 	
 	@Transactional(readOnly = true)
 	public UserDTO findById(Long id) {
-		authService.validateSelfOrAdmin(id);
-		Optional<User> obj = repository.findById(id);
-		User entity = obj.orElseThrow(() -> new ResourceNotFoundException("Entity not found"));
-		return new UserDTO(entity);
+		Optional<User> userOptional = userRepository.findById(id);
+		User user = userOptional.orElseThrow(() -> new ResourceNotFoundException("Entity not found!"));
+		return new UserDTO(user);
 	}
-	
+
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		User user = userRepository.findByEmail(username);
 		
-		User user = repository.findByEmail(username);
-		if (user == null) {
-			logger.error("User not found: " + username);
-			throw new UsernameNotFoundException("Email not found");
+		if(user == null) {
+			logger.error("User not found " + username);
+			throw new UsernameNotFoundException("User not found " + username);
 		}
-		logger.info("User found: " + username);
+		logger.info("User found " + username);
 		return user;
 	}
+	
 }
